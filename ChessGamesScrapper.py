@@ -1,36 +1,28 @@
-import csv
-import time
-
 from ChessGame import ChessGame
+import csv
+import random
+import time
 from bs4 import BeautifulSoup
 import requests
 
 
-def main():
-    url1 = 'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995'  # First page
-    url2 = 'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995/?p=1&start=100'  # Second page
-    url3 = 'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995/?p=1&start=200'  # Third page
-
+def main(first_page_url, set_of_pages_url, file_name):
     # Only first page contains Elo ratings of players
-    players_dictionary = get_dictionary_of_players(url1)
+    players_dictionary = get_dictionary_of_players(first_page_url)
 
-    # Getting list of games from all pages
-    time.sleep(14.4)  # Using sleep to avoid getting banned
-    list_of_games = get_list_of_games(url1, players_dictionary)
+    list_of_games = []
 
-    time.sleep(11.24)
-    list_of_games += get_list_of_games(url2, players_dictionary)
-
-    time.sleep(21.9)
-    list_of_games += get_list_of_games(url3, players_dictionary)
+    for page in set_of_pages_url:
+        random_number = random.uniform(5, 30)  # Random number between 5 and 30
+        time.sleep(random_number)  # Using sleep to avoid getting banned
+        list_of_games += get_list_of_games(page, players_dictionary)
 
     # Changing players' links to players' names
     for game in list_of_games:
         game.change_players_links_to_players_names()
 
     # Saving games to a CSV file
-    csv_file = 'games.csv'
-    save_games_to_csv_file(list_of_games, 'games.csv')
+    save_games_to_csv_file(list_of_games, file_name)
 
 
 def get_player_elo(player_link, players_dictionary):
@@ -97,8 +89,8 @@ def get_list_of_games(url, players_dictionary):  # This function returns a list 
             game = ChessGame(link_to_white_player, link_to_black_player, opening, result)
 
             # Adding Elo ratings to the game
-            game.white_player_elo = get_player_elo(link_to_white_player, players_dictionary)
-            game.black_player_elo = get_player_elo(link_to_black_player, players_dictionary)
+            game.set_white_player_elo(get_player_elo(link_to_white_player, players_dictionary))
+            game.set_black_player_elo(get_player_elo(link_to_black_player, players_dictionary))
 
             games.append(game)
 
@@ -106,14 +98,24 @@ def get_list_of_games(url, players_dictionary):  # This function returns a list 
 
 
 def save_games_to_csv_file(games, file_name):
-    with open(file_name, mode='w', newline='') as file:
+    with open(file_name, mode='a', newline='', encoding='utf-8') as file:  # Using 'a' mode to append to the file,
+        # 'w' mode to overwrite
         writer = csv.writer(file)
 
-        writer.writerow(["White Player", "White Player Elo", "Black Player", "Black Player Elo", "Opening", "Result"])
+        # writer.writerow(["White Player", "White Player Elo", "Black Player", "Black Player Elo", "Opening", "Result"])
 
         for game in games:
-            writer.writerow(game.to_list())
+            if game.validate():
+                writer.writerow(game.to_list())
 
 
 if __name__ == '__main__':
-    main()
+    # Type first page of the tournament
+    first_page = 'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995'
+
+    # Type set of pages of the tournament
+    set_of_pages = {'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995',
+                    'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995/?p=1&start=100',
+                    'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995/?p=1&start=200'}
+
+    main(first_page, set_of_pages, 'games.csv')
