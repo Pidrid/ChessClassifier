@@ -102,7 +102,9 @@ def save_games_to_csv_file(games, file_name):
         # 'w' mode to overwrite
         writer = csv.writer(file)
 
-        # writer.writerow(["White Player", "White Player Elo", "Black Player", "Black Player Elo", "Opening", "Result"])
+        # Writing header, comment if you are appending to the file
+        # writer.writerow(['White player', 'White player Elo', 'Black player', 'Black player Elo', 'Opening Code',
+        #                  'Opening' ,'Result'])
 
         for game in games:
             if game.validate():
@@ -110,12 +112,10 @@ def save_games_to_csv_file(games, file_name):
 
 
 if __name__ == '__main__':
-    # Type first page of the tournament
-    first_page = 'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995'
+    # Type url of first page of the tournament
+    first_page = 'https://www.365chess.com/tournaments/Superbet_Rapid_2023_2023/45711'
 
-    # Type set of pages of the tournament
-    set_of_pages = {'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995',
-                    'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995/?p=1&start=100',
-                    'https://www.365chess.com/tournaments/bundesliga_2023-24_2023/45995/?p=1&start=200'}
+    # Type url of set of pages of the tournament
+    set_of_pages = {'https://www.365chess.com/tournaments/Superbet_Rapid_2023_2023/45711'}
 
     main(first_page, set_of_pages, 'games.csv')
