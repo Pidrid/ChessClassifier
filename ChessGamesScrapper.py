@@ -13,7 +13,7 @@ def main(first_page_url, set_of_pages_url, file_name):
     list_of_games = []
 
     for page in set_of_pages_url:
-        random_number = random.uniform(5, 30)  # Random number between 5 and 30
+        random_number = random.uniform(5, 20)  # Random number between 5 and 20
         time.sleep(random_number)  # Using sleep to avoid getting banned
         list_of_games += get_list_of_games(page, players_dictionary)
 
@@ -50,6 +50,9 @@ def get_dictionary_of_players(url):  # This function returns a dictionary with p
             # Find Elo rating
             elo_rating = row.find_all('td', align='center')[1].text
 
+            if elo_rating.isdecimal():
+                elo_rating = int(elo_rating)
+            # Adding player and his Elo rating to the dictionary
             players[link_to_player] = elo_rating
 
     return players
@@ -98,13 +101,13 @@ def get_list_of_games(url, players_dictionary):  # This function returns a list 
 
 
 def save_games_to_csv_file(games, file_name):
-    with open(file_name, mode='a', newline='', encoding='utf-8') as file:  # Using 'a' mode to append to the file,
-        # 'w' mode to overwrite
+    # Using 'a' mode to append to the file, 'w' mode to overwrite
+    with open(file_name, mode='a', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
 
         # Writing header, comment if you are appending to the file
         # writer.writerow(['White player', 'White player Elo', 'Black player', 'Black player Elo', 'Opening Code',
-        #                  'Opening' ,'Result'])
+        #                  'Opening', 'Result'])
 
         for game in games:
             if game.validate():
@@ -113,9 +116,24 @@ def save_games_to_csv_file(games, file_name):
 
 if __name__ == '__main__':
     # Type url of first page of the tournament
-    first_page = 'https://www.365chess.com/tournaments/Superbet_Rapid_2023_2023/45711'
+    first_page = 'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111'
 
     # Type url of set of pages of the tournament
-    set_of_pages = {'https://www.365chess.com/tournaments/Superbet_Rapid_2023_2023/45711'}
+    set_of_pages = {'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=100',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=200',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=300',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=400',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=500',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=600',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=700',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=800',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=900',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1000',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1100',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1200',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1300',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1400',
+                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1500'}
 
     main(first_page, set_of_pages, 'games.csv')
