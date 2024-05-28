@@ -167,10 +167,6 @@ class ChessGame:
             return False
         return True
 
-    def change_players_links_to_players_names(self):
-        self.white_player = self.white_player.split('/')[-1]
-        self.black_player = self.black_player.split('/')[-1]
-
     def to_list(self):
         return [self.white_player, self.__white_player_elo, self.black_player, self.__black_player_elo,
                 self.opening_code,

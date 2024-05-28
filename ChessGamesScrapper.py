@@ -1,35 +1,44 @@
-from ChessGame import ChessGame
-import csv
+import requests
 import random
 import time
+import csv
 from bs4 import BeautifulSoup
-import requests
+from ChessGame import ChessGame
 
 
-def main(first_page_url, set_of_pages_url, file_name):
+def main(first_page_url, csv_file_name, appending: bool = True):
     # Only first page contains Elo ratings of players
     players_dictionary = get_dictionary_of_players(first_page_url)
 
-    list_of_games = []
+    list_of_games = get_list_of_games(first_page_url, players_dictionary)
 
-    for page in set_of_pages_url:
-        random_number = random.uniform(5, 20)  # Random number between 5 and 20
-        time.sleep(random_number)  # Using sleep to avoid getting banned
-        list_of_games += get_list_of_games(page, players_dictionary)
+    # Getting games from next pages
 
-    # Changing players' links to players' names
-    for game in list_of_games:
-        game.change_players_links_to_players_names()
+    is_blank_page = False
+    url = first_page_url + '/?p=1&start=100'
 
-    # Saving games to a CSV file
-    save_games_to_csv_file(list_of_games, file_name)
+    while not is_blank_page:
+        random_number = random.uniform(5, 20)
+        time.sleep(random_number)
+        games = get_list_of_games(url, players_dictionary)
+        if len(games) == 0:
+            is_blank_page = True
+        else:
+            list_of_games += games
+            url = first_page_url + '/?p=1&start=' + str(int(url.split('=')[-1]) + 100)
+
+    save_games_to_csv_file(list_of_games, csv_file_name, appending)
 
 
-def get_player_elo(player_link, players_dictionary):
-    if player_link in players_dictionary:
-        return players_dictionary[player_link]
+def get_player_elo(player, players_dictionary):
+    if player in players_dictionary:
+        return players_dictionary[player]
     else:
         return 0
+
+
+def convert_player_link_to_player_name(player_link):
+    return player_link.split('/')[-1]
 
 
 def get_dictionary_of_players(url):  # This function returns a dictionary with players and their Elo ratings
@@ -45,20 +54,21 @@ def get_dictionary_of_players(url):  # This function returns a dictionary with p
 
         if len(links) == 1:
             # If there is only one link, it means that it is a player with his Elo rating
-            link_to_player = links[0]['href']
+            player = convert_player_link_to_player_name(links[0]['href'])
 
-            # Find Elo rating
+            # Finding Elo rating
             elo_rating = row.find_all('td', align='center')[1].text
 
             if elo_rating.isdecimal():
                 elo_rating = int(elo_rating)
+
             # Adding player and his Elo rating to the dictionary
-            players[link_to_player] = elo_rating
+            players[player] = elo_rating
 
     return players
 
 
-def get_list_of_games(url, players_dictionary):  # This function returns a list of ChessGame objects from next pages
+def get_list_of_games(url, players_dictionary):
     result = requests.get(url)
     document = BeautifulSoup(result.text, 'html.parser')
 
@@ -73,11 +83,11 @@ def get_list_of_games(url, players_dictionary):  # This function returns a list 
         if len(links) == 6:
             # If there are 6 links, it means that it is a game
 
-            # Find players
-            link_to_white_player = links[0]['href']
-            link_to_black_player = links[1]['href']
+            # Finding players
+            white_player = convert_player_link_to_player_name(links[0]['href'])
+            black_player = convert_player_link_to_player_name(links[1]['href'])
 
-            # Find result
+            # Finding result
             result = ''
             cells_with_center_align = row.find_all('td', align='center')  # Finding cells with align='center'
             for cell in cells_with_center_align:
@@ -85,55 +95,51 @@ def get_list_of_games(url, players_dictionary):  # This function returns a list 
                     result = cell.text.strip()
                     break
 
-            # Find opening
+            # Finding opening
             opening = row.find('td', id='col-open').a.text.strip()
 
-            # Create a new ChessGame object and adding it to the games list
-            game = ChessGame(link_to_white_player, link_to_black_player, opening, result)
+            # Creating a new ChessGame object and adding it to the games list
+            game = ChessGame(white_player, black_player, opening, result)
 
             # Adding Elo ratings to the game
-            game.set_white_player_elo(get_player_elo(link_to_white_player, players_dictionary))
-            game.set_black_player_elo(get_player_elo(link_to_black_player, players_dictionary))
+            game.set_white_player_elo(get_player_elo(white_player, players_dictionary))
+            game.set_black_player_elo(get_player_elo(black_player, players_dictionary))
 
             games.append(game)
 
     return games
 
 
-def save_games_to_csv_file(games, file_name):
-    # Using 'a' mode to append to the file, 'w' mode to overwrite
-    with open(file_name, mode='a', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
+def save_games_to_csv_file(list_of_games, csv_file_name: str, appending: bool = True):
+    if appending:
+        with open(csv_file_name, mode='a', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            for game in list_of_games:
+                if game.validate():
+                    writer.writerow(game.to_list())
 
-        # Writing header, comment if you are appending to the file
-        # writer.writerow(['White player', 'White player Elo', 'Black player', 'Black player Elo', 'Opening Code',
-        #                  'Opening', 'Result'])
+    else:
+        with open(csv_file_name, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
 
-        for game in games:
-            if game.validate():
-                writer.writerow(game.to_list())
+            # Writing header
+            writer.writerow(['White player', 'White player Elo', 'Black player', 'Black player Elo', 'Opening Code',
+                             'Opening', 'Result'])
+
+            for game in list_of_games:
+                if game.validate():
+                    writer.writerow(game.to_list())
 
 
 if __name__ == '__main__':
-    # Type url of first page of the tournament
-    first_page = 'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111'
+    # Example of usage
+    # main('https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111', 'World_Rapid_2018.csv', False)
 
-    # Type url of set of pages of the tournament
-    set_of_pages = {'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=100',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=200',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=300',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=400',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=500',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=600',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=700',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=800',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=900',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1000',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1100',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1200',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1300',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1400',
-                    'https://www.365chess.com/tournaments/World_Rapid_2018_2018/43111/?p=1&start=1500'}
+    first_page = input('Enter the URL of the first page of the tournament: ')
+    file_name = input('Enter the name of the file: ')
+    write_or_append = input('Do you want to write or append to the file? (write/append): ')
 
-    main(first_page, set_of_pages, 'games.csv')
+    if write_or_append == 'write':
+        main(first_page, file_name, True)
+    else:
+        main(first_page, file_name, False)
